@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>oviceリアクションメーカー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&family=RocknRoll+One&family=Yuji+Syuku&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
+    <!-- ★新設：GIFを生成するための魔法のライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        :root {
+            --primary-pink: #f472b6; 
+            --primary-rose: #fb7185; 
+        }
+        body {
+            font-family: 'Zen Maru Gothic', 'M PLUS Rounded 1c', sans-serif;
+        }
+        #reactionCanvas {
+            touch-action: none;
+            background-color: transparent;
+        }
+        .canvas-container {
+            background-color: #fff;
+            background-image: 
+                linear-gradient(45deg, #f9fafb 25%, transparent 25%, transparent 75%, #f9fafb 75%, #f9fafb),
+                linear-gradient(45deg, #f9fafb 25%, transparent 25%, transparent 75%, #f9fafb 75%, #f9fafb);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+        .tab-active {
+            background-color: #fdf2f8; 
+            border-bottom: 3px solid #f472b6; 
+            color: #db2777; 
+            font-weight: bold;
+        }
+        .font-zen { font-family: 'Zen Maru Gothic', sans-serif; }
+        .font-mplus { font-family: 'M PLUS Rounded 1c', sans-serif; }
+        .font-rocknroll { font-family: 'RocknRoll One', sans-serif; }
+        .font-yusei { font-family: 'Yusei Magic', cursive; }
+        .font-yuji { font-family: 'Yuji Syuku', serif; }
+        .font-sans { font-family: sans-serif; }
+
+        ::placeholder { opacity: 0.3 !important; }
+
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #fdf2f8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #fbcfe8; border-radius: 10px; border: 2px solid #fdf2f8; }
+        ::-webkit-scrollbar-thumb:hover { background: #f472b6; }
+    </style>
+</head>
+<body class="bg-pink-50 text-slate-700 h-screen flex flex-col overflow-hidden">
+
+    <div id="loadingOverlay" class="fixed inset-0 bg-pink-50 flex flex-col items-center justify-center z-[100] transition-opacity duration-300">
+        <svg class="animate-spin h-12 w-12 text-pink-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h2 id="loadingText" class="text-xl font-bold text-pink-500">カワイイ文字を準備中...✨</h2>
+    </div>
+
+    <header class="bg-white shadow-sm py-3 px-6 flex items-center justify-between shrink-0 border-b border-pink-100">
+        <h1 class="text-2xl font-extrabold text-pink-500 flex items-center gap-2 tracking-wide">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-pink-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+            </svg>
+            oviceリアクションメーカー
+        </h1>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- 左側：コントロールパネル -->
+        <aside class="w-full md:w-1/2 lg:w-96 bg-white border-r border-pink-100 flex flex-col shrink-0 z-10 shadow-xl md:shadow-none h-1/2 md:h-full overflow-hidden">
+            
+            <div class="flex border-b border-pink-100 pt-2 px-2 shrink-0 gap-1 bg-white">
+                <button onclick="switchTab('text')" id="tab-text" class="flex-1 px-2 py-3 tab-active rounded-t-2xl transition-colors text-sm">文字編集</button>
+                <button onclick="switchTab('emoji')" id="tab-emoji" class="flex-1 px-2 py-3 text-slate-400 hover:text-pink-500 rounded-t-2xl transition-colors text-sm">絵文字</button>
+                <button onclick="switchTab('bg')" id="tab-bg" class="flex-1 px-2 py-3 text-slate-400 hover:text-pink-500 rounded-t-2xl transition-colors text-sm">エモ背景</button>
+            </div>
+
+            <div class="p-5 flex-1 overflow-y-auto bg-white/50">
+                
+                <!-- 文字・編集タブ -->
+                <div id="content-text" class="space-y-4 block">
+                    <div class="bg-pink-50/50 p-4 rounded-2xl border border-pink-100">
+                        <label class="block text-sm font-bold text-pink-800 mb-2 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
+                            文字（改行できます）
+                        </label>
+                        <textarea id="textInput" rows="2" placeholder="文字を入力してね&#13;&#10;（改行もOK！）" class="w-full px-4 py-3 border-2 border-pink-200 rounded-xl focus:ring-0 focus:border-pink-400 outline-none transition-shadow resize-none text-lg"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-pink-800 mb-2">フォント</label>
+                            <select id="textFont" class="w-full px-3 py-2.5 border-2 border-pink-200 rounded-xl focus:border-pink-400 outline-none text-sm cursor-pointer bg-white">
+                                <option value="Zen Maru Gothic" class="font-zen">丸ゴシック</option>
+                                <option value="M PLUS Rounded 1c" class="font-mplus">ぷっくり太丸</option>
+                                <option value="RocknRoll One" class="font-rocknroll">躍動感ポップ</option>
+                                <option value="Yusei Magic" class="font-yusei">手書き風</option>
+                                <option value="Yuji Syuku" class="font-yuji">達筆・毛筆風</option>
+                                <option value="sans-serif" class="font-sans">標準ゴシック</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-pink-800 mb-2">文字の色</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="textColor" value="#fb7185" class="w-full h-[42px] rounded-xl cursor-pointer border-2 border-pink-200 p-0.5 bg-white">
+                            </div>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-bold text-pink-800 mb-2">揃え位置</label>
+                            <div class="flex border-2 border-pink-200 rounded-xl overflow-hidden bg-white text-sm">
+                                <button onclick="setTextAlign('left')" id="btn-align-left" class="flex-1 py-2 hover:bg-pink-50 transition-colors text-slate-500">左</button>
+                                <button onclick="setTextAlign('center')" id="btn-align-center" class="flex-1 py-2 bg-pink-100 font-bold border-x border-pink-200 text-pink-600 transition-colors">中央</button>
+                                <button onclick="setTextAlign('right')" id="btn-align-right" class="flex-1 py-2 hover:bg-pink-50 transition-colors text-slate-500">右</button>
+                            </div>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-bold text-pink-800 mb-2">エフェクト</label>
+                            <select id="textEffect" class="w-full px-3 py-2.5 border-2 border-pink-200 rounded-xl focus:border-pink-400 outline-none text-sm cursor-pointer bg-white">
+                                <option value="outline">枠線</option>
+                                <option value="shadow">影付き</option>
+                                <option value="emboss">浮き出し</option>
+                                <option value="none">なし</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button onclick="addText()" class="w-full py-3 bg-pink-400 text-white font-bold rounded-xl shadow-md hover:bg-pink-500 hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                            新しく追加する
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 絵文字タブ -->
+                <div id="content-emoji" class="space-y-6 hidden">
+                    <div class="grid grid-cols-4 gap-3 text-4xl text-center">
+                        <button onclick="addEmoji('👍')" class="aspect-square flex items-center justify-center bg-white border-2 border-pink-100 hover:border-pink-400 rounded-2xl transition-all hover:scale-110 shadow-sm">👍</button>
+                        <button onclick="addEmoji('🎉')" class="aspect-square flex items-center justify-center bg-white border-2 border-pink-100 hover:border-pink-400 rounded-2xl transition-all hover:scale-110 shadow-sm">🎉</button>
+                        <button onclick="addEmoji('🔥')" class="aspect-square flex items-center justify-center bg-white border-2 border-pink-100 hover:border-pink-400 rounded-2xl transition-all hover:scale-110 shadow-sm">🔥</button>
+                        <button onclick="addEmoji('👀')" class="aspect-square flex items-center justify-center bg-white border-2 border-pink-100 hover:border-pink-400 rounded-2xl transition-all hover:scale-110 shadow-sm">👀</button>
+                    </div>
+                    <div class="pt-5 border-t-2 border-pink-100 border-dashed">
+                        <label class="block text-sm font-bold text-pink-800 mb-2">キーボードから自由入力</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="emojiInput" placeholder="🍎" class="w-full px-4 py-3 text-2xl text-center border-2 border-pink-200 rounded-xl focus:border-pink-400 outline-none">
+                            <button onclick="addCustomEmoji()" class="px-6 py-3 bg-pink-100 text-pink-600 font-bold rounded-xl hover:bg-pink-200 transition-colors">追加</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- エモ背景タブ -->
+                <div id="content-bg" class="space-y-4 hidden">
+                    <div class="mb-4">
+                        <input type="file" id="bgUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        <button onclick="document.getElementById('bgUpload').click()" class="w-full h-14 bg-pink-50 border-2 border-pink-300 border-dashed rounded-xl hover:bg-pink-100 hover:border-pink-500 flex items-center justify-center gap-2 transition-all text-pink-600 font-bold shadow-sm">
+                            オリジナル画像を追加（動かせます！）
+                        </button>
+                    </div>
+
+                    <label class="block text-sm font-bold text-pink-800 mb-2 border-t-2 border-pink-100 border-dashed pt-4">キャンバスの背景を変更</label>
+                    
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setBg('none')" class="h-16 bg-white border-2 border-slate-200 rounded-xl hover:border-pink-400 flex items-center justify-center flex-col gap-1 transition-all"><span class="text-xl">⬜</span><span class="text-[10px] font-bold text-slate-500">透明</span></button>
+                        <button onclick="setBg('pink-gradient')" class="h-16 bg-gradient-to-br from-pink-200 to-rose-100 border-2 border-pink-300 rounded-xl hover:border-pink-500 flex items-center justify-center flex-col gap-1 transition-all"><span class="text-xl">🌸</span><span class="text-[10px] font-bold text-pink-700">ふんわり</span></button>
+                        <button onclick="setBg('focus-lines')" class="h-16 bg-yellow-50 border-2 border-yellow-200 rounded-xl hover:border-yellow-400 flex items-center justify-center flex-col gap-1 transition-all overflow-hidden relative"><div class="absolute inset-0 bg-[radial-gradient(circle,transparent_30%,#fef08a_100%)]"></div><span class="text-xl relative z-10">⚡</span><span class="text-[10px] font-bold text-yellow-700 relative z-10">集中線</span></button>
+                        
+                        <button onclick="setBg('blue-sky')" class="h-16 bg-gradient-to-b from-blue-300 to-white border-2 border-blue-200 rounded-xl hover:border-blue-400 flex items-center justify-center flex-col gap-1 transition-all"><span class="text-xl">🌤️</span><span class="text-[10px] font-bold text-blue-700">青空</span></button>
+                        <button onclick="setBg('sunset')" class="h-16 bg-gradient-to-b from-orange-400 via-red-400 to-purple-600 border-2 border-orange-300 rounded-xl hover:border-orange-500 flex items-center justify-center flex-col gap-1 transition-all"><span class="text-xl">🌇</span><span class="text-[10px] font-bold text-white">夕焼け</span></button>
+                        <button onclick="setBg('polka-dots')" class="h-16 bg-pink-50 border-2 border-pink-200 rounded-xl hover:border-pink-400 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: radial-gradient(#f472b6 20%, transparent 20%); background-size: 15px 15px; opacity: 0.2;"></div><span class="text-xl relative z-10">🫧</span><span class="text-[10px] font-bold text-pink-600 relative z-10">水玉</span></button>
+                        
+                        <button onclick="setBg('speed-lines')" class="h-16 bg-white border-2 border-slate-300 rounded-xl hover:border-slate-500 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: repeating-linear-gradient(90deg, transparent, transparent 10px, #cbd5e1 10px, #cbd5e1 12px); opacity: 0.5;"></div><span class="text-xl relative z-10">💨</span><span class="text-[10px] font-bold text-slate-600 relative z-10">スピード線</span></button>
+                        <button onclick="setBg('stripes')" class="h-16 bg-white border-2 border-blue-200 rounded-xl hover:border-blue-400 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: repeating-linear-gradient(45deg, #bfdbfe 0, #bfdbfe 10px, transparent 10px, transparent 20px);"></div><span class="text-xl relative z-10">🦓</span><span class="text-[10px] font-bold text-blue-800 relative z-10 bg-white/70 px-1 rounded">ストライプ</span></button>
+                        <button onclick="setBg('checkered')" class="h-16 bg-white border-2 border-slate-400 rounded-xl hover:border-slate-600 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: conic-gradient(#94a3b8 90deg, transparent 90deg 180deg, #94a3b8 180deg 270deg, transparent 270deg); background-size: 15px 15px; opacity: 0.5;"></div><span class="text-xl relative z-10">🏁</span><span class="text-[10px] font-bold text-slate-800 relative z-10 bg-white/80 px-1 rounded">市松模様</span></button>
+
+                        <button onclick="setBg('sparkle')" class="h-16 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 border-2 border-purple-500 rounded-xl hover:border-pink-400 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><span class="text-xl relative z-10">🌃</span><span class="text-[10px] font-bold text-pink-200 relative z-10">ネオン</span></button>
+                        <button onclick="setBg('space')" class="h-16 bg-slate-900 border-2 border-indigo-500 rounded-xl hover:border-indigo-400 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: radial-gradient(white 1px, transparent 1px); background-size: 15px 15px; opacity: 0.8;"></div><span class="text-xl relative z-10">🌌</span><span class="text-[10px] font-bold text-indigo-200 relative z-10">宇宙</span></button>
+                        <button onclick="setBg('spotlight')" class="h-16 bg-slate-800 border-2 border-slate-600 rounded-xl hover:border-yellow-300 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] bg-yellow-100"></div><span class="text-xl relative z-10">💡</span><span class="text-[10px] font-bold text-yellow-300 relative z-10">スポット</span></button>
+
+                        <button onclick="setBg('fire')" class="h-16 bg-gradient-to-t from-red-600 via-orange-500 to-yellow-300 border-2 border-red-400 rounded-xl hover:border-red-500 flex items-center justify-center flex-col gap-1 transition-all"><span class="text-xl">🔥</span><span class="text-[10px] font-bold text-white shadow-sm">炎</span></button>
+                        <button onclick="setBg('cyber')" class="h-16 bg-black border-2 border-green-500 rounded-xl hover:border-green-400 flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden"><div class="absolute inset-0" style="background-image: linear-gradient(#22c55e 1px, transparent 1px), linear-gradient(90deg, #22c55e 1px, transparent 1px); background-size: 10px 10px; opacity: 0.3;"></div><span class="text-xl relative z-10">💻</span><span class="text-[10px] font-bold text-green-400 relative z-10">サイバー</span></button>
+                        <button onclick="setBg('comic-tone')" class="h-16 bg-white border-2 border-slate-800 rounded-xl hover:border-black flex items-center justify-center flex-col gap-1 transition-all relative overflow-hidden">
+                            <div class="absolute inset-0" style="background: repeating-conic-gradient(from 0deg, #000 0deg 2deg, #fff 2deg 10deg); opacity: 0.8; clip-path: circle(70% at 50% 50%); mask-image: radial-gradient(circle, transparent 40%, black 50%); -webkit-mask-image: radial-gradient(circle, transparent 40%, black 50%);"></div>
+                            <span class="text-xl relative z-10">💥</span>
+                            <span class="text-[10px] font-bold text-white relative z-10 bg-black/80 px-1.5 rounded">コミック</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="p-3 bg-pink-50 border-t border-pink-100 text-xs text-pink-600 shrink-0 font-bold flex items-center justify-center gap-2">
+                上の「🔄」を掴んでグルグル回せます！
+            </div>
+        </aside>
+
+        <!-- 右側：キャンバス＆プレビュー領域 -->
+        <section class="flex-1 bg-pink-50/50 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-y-auto">
+            
+            <div class="mb-4 text-center">
+                <h2 class="text-xl font-extrabold text-slate-700 tracking-wide">✨ 完成プレビュー ✨</h2>
+                <p class="text-sm text-pink-500 font-bold mt-1">💡 oviceでは小さく表示されるので、キャンバスいっぱいに大きく配置するのがコツです！</p>
+            </div>
+
+            <div class="relative bg-white rounded-3xl shadow-xl shadow-pink-200/50 p-4 mb-8 w-full max-w-sm flex flex-col items-center">
+                <div class="canvas-container rounded-2xl overflow-hidden border-2 border-pink-100 relative">
+                    <canvas id="reactionCanvas" width="256" height="256" class="cursor-move"></canvas>
+                </div>
+                
+                <button id="btnUndo" onclick="undo()" class="absolute -top-3 -left-3 px-4 py-2 bg-white border-2 border-slate-200 text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 rounded-full shadow-lg transition-all hidden flex items-center gap-1 font-bold text-sm z-10">
+                    元に戻す
+                </button>
+
+                <div id="layerControls" class="hidden flex-col items-center mt-4 pt-4 border-t-2 border-dashed border-pink-100 w-full">
+                    <span class="text-xs font-bold text-pink-500 mb-3">👇 選択中のアイテムを操作</span>
+                    
+                    <!-- ★新設：共通の「動き」設定パネルへお引越し！ -->
+                    <div class="w-full mb-3 bg-pink-50/50 p-2 rounded-xl border border-pink-100">
+                        <label class="block text-xs font-bold text-pink-800 mb-1 flex items-center gap-1">
+                            🎬 アイテムの動き (GIF用)
+                        </label>
+                        <select id="itemAnimation" onchange="updateSelectedAnimation()" class="w-full px-2 py-2 border-2 border-pink-200 rounded-xl focus:border-pink-400 outline-none text-sm cursor-pointer bg-white">
+                            <option value="none">止まったまま</option>
+                            <option value="buruburu">ブルブル（熱量MAX！）</option>
+                            <option value="fuwafuwa">フワフワ（浮遊感）</option>
+                            <option value="pikapika">ピカピカ（点滅）</option>
+                            <option value="spin">ぐるぐる（回転）</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-wrap justify-center gap-2 w-full">
+                        <button onclick="moveLayer('back')" class="px-2 py-2 bg-slate-50 hover:bg-pink-50 text-slate-600 text-xs font-bold rounded-lg border-2 border-slate-200 hover:border-pink-300 transition-all flex-1 text-center">最背面へ</button>
+                        <button onclick="moveLayer('backward')" class="px-2 py-2 bg-slate-50 hover:bg-pink-50 text-slate-600 text-xs font-bold rounded-lg border-2 border-slate-200 hover:border-pink-300 transition-all flex-1 text-center">背面へ</button>
+                        <button onclick="moveLayer('forward')" class="px-2 py-2 bg-slate-50 hover:bg-pink-50 text-slate-600 text-xs font-bold rounded-lg border-2 border-slate-200 hover:border-pink-300 transition-all flex-1 text-center">前面へ</button>
+                        <button onclick="moveLayer('front')" class="px-2 py-2 bg-slate-50 hover:bg-pink-50 text-slate-600 text-xs font-bold rounded-lg border-2 border-slate-200 hover:border-pink-300 transition-all flex-1 text-center">最前面へ</button>
+                    </div>
+                    <button onclick="deleteSelected()" class="mt-3 w-full px-4 py-2 bg-white hover:bg-red-50 text-red-500 font-bold rounded-xl border-2 border-red-200 transition-colors flex items-center justify-center gap-1 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        選んだアイテムだけを削除
+                    </button>
+                </div>
+            </div>
+
+            <div class="w-full max-w-sm flex flex-col gap-3">
+                <button onclick="clearCanvas()" class="w-full py-3 bg-white border-2 border-red-200 text-red-400 font-bold rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors flex justify-center items-center gap-2">
+                    キャンバスを白紙に戻す（全リセット）
+                </button>
+                
+                <div class="flex gap-2">
+                    <button onclick="preparePreview('png')" class="flex-1 py-3 bg-white border-2 border-pink-200 text-pink-500 font-bold rounded-xl hover:bg-pink-50 transition-colors shadow-sm text-sm flex justify-center items-center gap-1">
+                        🖼️ 静止画で保存
+                    </button>
+                    <button onclick="preparePreview('gif')" class="flex-1 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold rounded-xl shadow-md hover:-translate-y-0.5 transition-all text-sm flex justify-center items-center gap-1">
+                        🎬 動くGIFで保存
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 究極のハック：完全な透明度で背面に常にテキストを配置 -->
+    <div style="position: absolute; opacity: 0.01; pointer-events: none; z-index: -1; user-select: none;" aria-hidden="true">
+        <span style="font-family: 'Zen Maru Gothic'; font-weight: 700;">あアaA1漢字</span>
+        <span style="font-family: 'M PLUS Rounded 1c'; font-weight: 700;">あアaA1漢字</span>
+        <span style="font-family: 'RocknRoll One'; font-weight: 400;">あアaA1漢字</span>
+        <span style="font-family: 'Yusei Magic'; font-weight: 400;">あアaA1漢字</span>
+        <span style="font-family: 'Yuji Syuku'; font-weight: 400;">あアaA1漢字</span>
+    </div>
+
+    <!-- oviceジオラマ風 プレビューモーダル（保存分岐追加） -->
+    <div id="previewModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[200] backdrop-blur-sm">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full mx-4 flex flex-col items-center transform scale-95 transition-transform duration-200" id="previewModalContent">
+            <h3 class="text-xl font-extrabold text-slate-700 mb-6 flex items-center gap-2">
+                👀 oviceではこんな感じに見えます！
+            </h3>
+            
+            <div class="bg-[#1a1b1e] w-full h-48 rounded-2xl p-4 flex items-center justify-center relative overflow-hidden mb-6 shadow-inner">
+                <div class="absolute inset-0" style="background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                
+                <div class="flex flex-col items-center relative z-10">
+                    <div class="bg-white p-3 rounded-2xl shadow-lg mb-2 relative animate-bounce" style="animation-duration: 2s;">
+                        <img id="previewImage" src="" alt="プレビュー" class="w-10 h-10 rounded-sm object-contain">
+                        <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-t-[8px] border-t-white border-r-[6px] border-r-transparent"></div>
+                    </div>
+                    <div class="w-10 h-10 bg-indigo-500 rounded-full border-2 border-white flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        You
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 w-full mt-2">
+                <div id="modal-warning" class="hidden bg-red-50 border-2 border-red-200 text-red-600 font-bold text-sm p-3 rounded-xl text-center whitespace-pre-line shadow-sm">
+                    ⚠️ サイズが1MBを超えました！
+                    背景をシンプルにするか静止画で保存してね
+                </div>
+                
+                <button id="btn-modal-save" onclick="executeDownload()" class="w-full py-3.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 text-lg">
+                    📥 このまま保存する
+                </button>
+
+                <button onclick="closePreviewModal()" class="w-full py-2 text-slate-400 text-sm font-bold mt-1 hover:text-slate-600 transition-colors underline">
+                    もう少し修正する（戻る）
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('reactionCanvas');
+        const ctx = canvas.getContext('2d');
+        let elements = []; 
+        let currentBg = 'none'; 
+        let selectedIndex = -1; 
+        let historyStack = []; 
+        
+        let actionState = 'none'; 
+        let dragStartX = 0, dragStartY = 0;
+        let initialElementSize = 0, initialElementWidth = 0, initialAngle = 0;
+        let stateBeforeAction = null; 
+
+        let globalTime = 0; 
+        let currentPreviewUrl = '';
+        let currentPreviewFileName = '';
+
+        const textInput = document.getElementById('textInput');
+        const textColor = document.getElementById('textColor');
+        const textFont = document.getElementById('textFont');
+        const textEffect = document.getElementById('textEffect');
+        const itemAnimation = document.getElementById('itemAnimation'); // ★変数名を変更し、取得先を共通パネルのIDへ
+
+        function getFontWeight(fontName) {
+            if (fontName === 'Zen Maru Gothic' || fontName === 'M PLUS Rounded 1c') return '700';
+            if (fontName === 'sans-serif') return 'bold';
+            return '400';
+        }
+
+        // シード付き疑似乱数（アニメーションの荒々しさを毎フレーム固定するため）
+        let _seed = 0;
+        function sRandom(seed) {
+            if (seed !== undefined) _seed = seed;
+            let x = Math.sin(_seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function getClonedElements() {
+            return elements.map(el => {
+                if (el.type === 'image') return { type: 'image', src: el.src, x: el.x, y: el.y, width: el.width, height: el.height, aspectRatio: el.aspectRatio, angle: el.angle || 0, animation: el.animation || 'none' };
+                const clone = JSON.parse(JSON.stringify(el));
+                clone.angle = el.angle || 0;
+                clone.animation = el.animation || 'none';
+                return clone;
+            });
+        }
+
+        function saveState() {
+            historyStack.push({ elements: getClonedElements(), currentBg: currentBg });
+            if (historyStack.length > 20) historyStack.shift();
+            updateUndoButton();
+        }
+
+        function undo() {
+            if (historyStack.length === 0) return;
+            const prevState = historyStack.pop();
+            currentBg = prevState.currentBg;
+            selectedIndex = -1; 
+            
+            elements = prevState.elements.map(el => {
+                if (el.type === 'image') {
+                    const img = new Image();
+                    img.src = el.src;
+                    return { ...el, img: img }; 
+                }
+                return el;
+            });
+            syncFormWithSelected();
+            updateUndoButton();
+        }
+
+        function updateUndoButton() {
+            const btnUndo = document.getElementById('btnUndo');
+            if (btnUndo) btnUndo.classList.toggle('hidden', historyStack.length === 0);
+        }
+
+        function init() {
+            elements.push({
+                type: 'text', text: '激しく\n同意！', x: 128, y: 128, color: '#fb7185', size: 70, font: 'Zen Maru Gothic', align: 'center', effect: 'outline', angle: 0, animation: 'none', width: 0, height: 0
+            });
+            selectedIndex = 0;
+            syncFormWithSelected();
+            
+            textInput.addEventListener('input', updateSelectedElement);
+            textColor.addEventListener('input', updateSelectedElement);
+            textFont.addEventListener('change', updateSelectedElement);
+            textEffect.addEventListener('change', updateSelectedElement);
+            // ★itemAnimationのイベントリスナーはHTML側の onchange="updateSelectedAnimation()" で処理
+            
+            // ★新設：常にキャンバスをアニメーションさせる魔法のループ
+            requestAnimationFrame(animateLoop);
+        }
+
+        // 常に時間を進めて描画し続ける
+        function animateLoop(timestamp) {
+            // 1.5秒（1500ms）で1周するループとして 0.0 〜 1.0 の時間を計算
+            globalTime = (timestamp % 1500) / 1500; 
+            draw(globalTime);
+            requestAnimationFrame(animateLoop);
+        }
+
+        // 古い forceRedraw はもう呼ばなくて大丈夫ですが互換性のため残します
+        function forceRedraw() {}
+
+        function switchTab(tabName) {
+            ['text', 'emoji', 'bg'].forEach(name => {
+                document.getElementById(`tab-${name}`).classList.toggle('tab-active', name === tabName);
+                document.getElementById(`tab-${name}`).classList.toggle('text-slate-400', name !== tabName);
+                document.getElementById(`content-${name}`).classList.toggle('hidden', name !== tabName);
+                document.getElementById(`content-${name}`).classList.toggle('block', name === tabName);
+            });
+            
+            if (tabName === 'text' && selectedIndex === -1) {
+                for (let i = elements.length - 1; i >= 0; i--) {
+                    if (elements[i].type === 'text') {
+                        selectedIndex = i;
+                        syncFormWithSelected();
+                        break;
+                    }
+                }
+            }
+        }
+
+        function syncFormWithSelected() {
+            if (selectedIndex !== -1) {
+                const el = elements[selectedIndex];
+                if (el.type === 'text') {
+                    textInput.value = el.text; textColor.value = el.color; textFont.value = el.font;
+                    textEffect.value = el.effect || 'none';
+                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                    updateAlignButtons(el.align || 'center');
+                } else if (el.type === 'emoji') {
+                    textInput.value = el.text;
+                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                } else if (el.type === 'image') {
+                    textInput.value = '';
+                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                }
+            } else {
+                textInput.value = '';
+                updateAlignButtons('center');
+            }
+        }
+
+        function updateAlignButtons(align) {
+            ['left', 'center', 'right'].forEach(pos => {
+                const btn = document.getElementById(`btn-align-${pos}`);
+                if (!btn) return;
+                if (pos === align) {
+                    btn.classList.add('bg-pink-100', 'font-bold', 'text-pink-600');
+                    btn.classList.remove('text-slate-500');
+                } else {
+                    btn.classList.remove('bg-pink-100', 'font-bold', 'text-pink-600');
+                    btn.classList.add('text-slate-500');
+                }
+            });
+        }
+
+        function setTextAlign(align) {
+            if (selectedIndex !== -1 && elements[selectedIndex].type === 'text') {
+                saveState();
+                elements[selectedIndex].align = align;
+                updateAlignButtons(align);
+            }
+        }
+
+        function updateSelectedElement() {
+            if (selectedIndex !== -1) {
+                const el = elements[selectedIndex];
+                if (el.type === 'text' || el.type === 'emoji') {
+                    saveState(); 
+                    el.text = textInput.value; 
+                    el.color = textColor.value; 
+                    el.font = textFont.value;
+                    if (el.type === 'text') {
+                        el.effect = textEffect.value;
+                    }
+                }
+            }
+        }
+
+        // ★新設：アニメーション設定が変更された時専用の処理
+        function updateSelectedAnimation() {
+            if (selectedIndex !== -1) {
+                saveState();
+                elements[selectedIndex].animation = itemAnimation.value;
+            }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    saveState(); 
+                    let w = img.width, h = img.height;
+                    const maxSize = 200; 
+                    if (w > h && w > maxSize) { h = h * (maxSize / w); w = maxSize; }
+                    else if (h > maxSize) { w = w * (maxSize / h); h = maxSize; }
+                    elements.push({ type: 'image', img: img, src: e.target.result, x: canvas.width / 2, y: canvas.height / 2, width: w, height: h, aspectRatio: w / h, angle: 0, animation: 'none' });
+                    selectedIndex = elements.length - 1;
+                    event.target.value = ''; 
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 背景を時間 (t) に応じて動かす
+        function drawBackground(t) {
+            ctx.save();
+            const w = canvas.width, h = canvas.height, cx = w / 2, cy = h / 2;
+            
+            if (currentBg === 'pink-gradient') {
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, w);
+                grad.addColorStop(0, '#fbcfe8'); grad.addColorStop(1, '#ffe4e6'); 
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+            } else if (currentBg === 'focus-lines') {
+                ctx.fillStyle = '#fef08a'; ctx.fillRect(0, 0, w, h); 
+                ctx.translate(cx, cy); 
+                // 時間とともにゆっくり回転
+                ctx.rotate(t * (Math.PI * 2) / 36);
+                ctx.fillStyle = '#fde047'; 
+                for (let i = 0; i < 36; i++) { 
+                    ctx.rotate((Math.PI * 2) / 36); 
+                    ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(w, 5); ctx.lineTo(w, -5); ctx.fill(); 
+                }
+            } else if (currentBg === 'sparkle') {
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, '#1e1b4b'); 
+                grad.addColorStop(0.5, '#312e81');
+                grad.addColorStop(1, '#4c1d95');
+                ctx.fillStyle = grad; 
+                ctx.fillRect(0, 0, w, h);
+                
+                // フワフワと明滅するネオンオーブ
+                const phase1 = 0.2 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.4;
+                const orb1 = ctx.createRadialGradient(w*0.8, h*0.2, 0, w*0.8, h*0.2, w*0.5);
+                orb1.addColorStop(0, `rgba(236, 72, 153, ${phase1})`); 
+                orb1.addColorStop(1, 'transparent');
+                ctx.fillStyle = orb1; ctx.fillRect(0, 0, w, h);
+                
+                const phase2 = 0.2 + Math.abs(Math.cos(t * Math.PI * 2)) * 0.4;
+                const orb2 = ctx.createRadialGradient(w*0.2, h*0.8, 0, w*0.2, h*0.8, w*0.5);
+                orb2.addColorStop(0, `rgba(56, 189, 248, ${phase2})`); 
+                orb2.addColorStop(1, 'transparent');
+                ctx.fillStyle = orb2; ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                sRandom(42); // 星の位置を固定
+                for(let i=0; i<40; i++) {
+                    ctx.beginPath();
+                    ctx.arc(sRandom()*w, sRandom()*h, sRandom()*1.5, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            } else if (currentBg === 'blue-sky') {
+                const grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, '#93c5fd'); grad.addColorStop(1, '#ffffff');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+            } else if (currentBg === 'sunset') {
+                const grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, '#7e22ce'); grad.addColorStop(0.5, '#f87171'); grad.addColorStop(1, '#fb923c');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+            } else if (currentBg === 'polka-dots') {
+                ctx.fillStyle = '#fdf2f8'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(244, 114, 182, 0.2)';
+                // 水玉が斜め上にゆっくり流れる
+                const offset = t * 30;
+                for (let y = -30; y <= h + 30; y += 30) { 
+                    for (let x = -30; x <= w + 30; x += 30) { 
+                        ctx.beginPath(); 
+                        ctx.arc(x + offset + (y % 60 === 0 ? 0 : 15), y - offset, 8, 0, Math.PI * 2); 
+                        ctx.fill(); 
+                    } 
+                }
+            } else if (currentBg === 'speed-lines') {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(203, 213, 225, 0.5)';
+                sRandom(10);
+                // ビュンビュン流れるスピード線
+                const moveX = (t * w * 2) % w;
+                for (let i = 0; i < 100; i++) { 
+                    let lineY = sRandom() * h;
+                    let lineW = sRandom() * w + 50;
+                    let lineX = (sRandom() * w + moveX * (sRandom() * 2 + 1)) % (w + lineW) - lineW;
+                    ctx.fillRect(lineX, lineY, lineW, sRandom() * 3 + 1); 
+                }
+            } else if (currentBg === 'stripes') {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(191, 219, 254, 0.8)';
+                ctx.rotate(Math.PI / 4); 
+                for (let i = -w * 2; i < w * 2; i += 40) { 
+                    ctx.fillRect(i - (t * 40), -h * 4, 20, h * 8); 
+                }
+            } else if (currentBg === 'space') {
+                ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                sRandom(99);
+                for (let i = 0; i < 100; i++) { 
+                    let bx = sRandom() * w;
+                    let by = sRandom() * h;
+                    // 星が下に向かって流れる
+                    let movedY = (by + t * h) % h; 
+                    ctx.beginPath(); ctx.arc(bx, movedY, sRandom() * 1.5, 0, Math.PI * 2); ctx.fill(); 
+                }
+            } else if (currentBg === 'fire') {
+                const grad = ctx.createLinearGradient(0, h, 0, 0);
+                grad.addColorStop(0, '#dc2626'); grad.addColorStop(0.5, '#f97316'); grad.addColorStop(1, '#fde047');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; 
+                ctx.beginPath(); ctx.moveTo(0, h);
+                sRandom(Math.floor(t * 15)); // コマ送りで炎を揺らめかせる
+                for(let i=0; i<=w; i+=20) { ctx.lineTo(i, h - 30 - sRandom() * 120); } 
+                ctx.lineTo(w, h); ctx.fill();
+            } else if (currentBg === 'cyber') {
+                ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'; ctx.lineWidth = 1;
+                // 奥から手前に迫るような緑のグリッド
+                const offset = (t * 20) % 20;
+                for (let i = -20; i < w + 20; i += 20) { ctx.beginPath(); ctx.moveTo(i + offset, 0); ctx.lineTo(i + offset, h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i + offset); ctx.lineTo(w, i + offset); ctx.stroke(); }
+            } else if (currentBg === 'checkered') {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+                const size = 32; 
+                ctx.translate(cx, cy); ctx.rotate(t * Math.PI / 2); ctx.translate(-cx*2, -cy*2); // ぐるぐる回す
+                for (let y = -h; y < h*2; y += size) { for (let x = -w; x < w*2; x += size) { if ((x / size + y / size) % 2 === 0) ctx.fillRect(x, y, size, size); } }
+            } else if (currentBg === 'spotlight') {
+                ctx.fillStyle = '#fefce8'; ctx.fillRect(0, 0, w, h);
+                // スポットライトが左右に揺れる
+                const spotX = cx + Math.sin(t * Math.PI * 2) * 50;
+                const grad = ctx.createRadialGradient(spotX, cy, 20, spotX, cy, w);
+                grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+            } else if (currentBg === 'comic-tone') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#000000';
+                
+                const numLines = 120; 
+                const maxRadius = Math.hypot(w/2, h/2); 
+                
+                // コマ送り（1秒間に15回変化）で形をランダムに変え、漫画特有の迫力を出す
+                let frameIdx = Math.floor(t * 15);
+                sRandom(frameIdx); 
+
+                ctx.translate(cx, cy);
+                // 少しずつ回転もさせる
+                ctx.rotate(t * Math.PI * 2 / numLines);
+
+                for (let i = 0; i < numLines; i++) {
+                    const angle = (i * 2 * Math.PI) / numLines;
+                    ctx.rotate(angle);
+                    
+                    const startRadius = 30 + sRandom() * 70; 
+                    const lineWidth = 0.5 + sRandom() * 3.5; 
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startRadius, -lineWidth/2);
+                    ctx.lineTo(maxRadius, -lineWidth/2 * (sRandom() * 3 + 1));
+                    ctx.lineTo(maxRadius, lineWidth/2 * (sRandom() * 3 + 1));
+                    ctx.lineTo(startRadius, lineWidth/2);
+                    ctx.fill();
+                    
+                    ctx.rotate(-angle);
+                }
+                ctx.translate(-cx, -cy);
+            }
+            ctx.restore();
+        }
+
+        // ★修正：isStatic 引数を追加し、静止画撮影時はアニメーションを無視させる！
+        function draw(t = globalTime, isStatic = false) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 静止画の場合でも背景の0秒時点は描画する
+            drawBackground(t);
+
+            elements.forEach((el, index) => {
+                ctx.save();
+                
+                let animOffsetX = 0;
+                let animOffsetY = 0;
+                let animAngle = 0;
+                let animAlpha = 1;
+
+                // ★静止画モード(isStatic)でない場合のみ、アニメーションの揺らぎを適用！
+                if (!isStatic) {
+                    const animType = el.animation || 'none';
+                    if (animType === 'buruburu') {
+                        animOffsetX = Math.sin(t * Math.PI * 2 * 10) * 4;
+                        animOffsetY = Math.cos(t * Math.PI * 2 * 11) * 4;
+                    } else if (animType === 'fuwafuwa') {
+                        animOffsetY = Math.sin(t * Math.PI * 2) * 8;
+                    } else if (animType === 'spin') {
+                        animAngle = t * Math.PI * 2;
+                    } else if (animType === 'pikapika') {
+                        animAlpha = 0.3 + 0.7 * Math.abs(Math.sin(t * Math.PI * 2 * 3));
+                    }
+                }
+
+                // 本体の座標に移動
+                ctx.translate(el.x + animOffsetX, el.y + animOffsetY);
+                ctx.rotate((el.angle || 0) + animAngle);
+                ctx.globalAlpha = animAlpha;
+
+                if (el.type === 'image') {
+                    ctx.drawImage(el.img, -el.width / 2, -el.height / 2, el.width, el.height);
+                } else if (el.type === 'text' || el.type === 'emoji') {
+                    const weight = getFontWeight(el.font);
+                    ctx.font = `${weight} ${el.size}px '${el.font || 'Zen Maru Gothic'}', sans-serif`;
+                    
+                    const lines = el.text.split('\n');
+                    const lineHeight = el.size * 1.2;
+                    const totalHeight = lines.length * lineHeight;
+                    const startY = -totalHeight / 2 + lineHeight / 2; 
+                    
+                    let maxWidth = 0;
+                    lines.forEach((line) => {
+                        const m = ctx.measureText(line);
+                        if(m.width > maxWidth) maxWidth = m.width;
+                    });
+                    
+                    el.width = maxWidth + el.size * 0.2; 
+                    el.height = totalHeight + el.size * 0.2;
+
+                    const align = el.align || 'center';
+                    ctx.textAlign = align;
+                    ctx.textBaseline = 'middle';
+                    let drawX = 0;
+                    if (align === 'left') drawX = -maxWidth / 2;
+                    if (align === 'right') drawX = maxWidth / 2;
+
+                    const effect = el.effect || 'none';
+
+                    lines.forEach((line, i) => {
+                        const drawY = startY + i * lineHeight;
+
+                        if (el.type === 'emoji') {
+                            ctx.fillText(line, drawX, drawY);
+                            return; 
+                        }
+
+                        if (effect === 'outline') {
+                            ctx.lineWidth = Math.max(4, el.size * 0.15);
+                            ctx.strokeStyle = 'white'; 
+                            ctx.lineJoin = 'round';
+                            ctx.strokeText(line, drawX, drawY);
+                            ctx.fillStyle = el.color;
+                            ctx.fillText(line, drawX, drawY);
+                        } else if (effect === 'shadow') {
+                            ctx.save();
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                            ctx.shadowBlur = el.size * 0.1;
+                            ctx.shadowOffsetX = el.size * 0.08;
+                            ctx.shadowOffsetY = el.size * 0.08;
+                            ctx.fillStyle = el.color;
+                            ctx.fillText(line, drawX, drawY);
+                            ctx.restore();
+                        } else if (effect === 'emboss') {
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                            ctx.fillText(line, drawX + el.size * 0.04, drawY + el.size * 0.04);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                            ctx.fillText(line, drawX - el.size * 0.03, drawY - el.size * 0.03);
+                            ctx.fillStyle = el.color;
+                            ctx.fillText(line, drawX, drawY);
+                        } else {
+                            ctx.fillStyle = el.color;
+                            ctx.fillText(line, drawX, drawY);
+                        }
+                    });
+                }
+
+                // 選択枠も一緒にアニメーションさせる
+                if (index === selectedIndex) {
+                    const hw = el.width / 2, hh = el.height / 2;
+                    
+                    ctx.beginPath(); ctx.rect(-hw, -hh, el.width, el.height);
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#f472b6'; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+                    
+                    ctx.beginPath(); ctx.moveTo(0, -hh); ctx.lineTo(0, -hh - 30); ctx.lineWidth = 2; ctx.strokeStyle = '#f472b6'; ctx.stroke();
+
+                    // ハンドルはアニメーションを引いたローカル座標系で定義
+                    el.handles = [
+                        {id: 'resize-tl', x: -hw, y: -hh}, {id: 'resize-tr', x: hw, y: -hh},
+                        {id: 'resize-bl', x: -hw, y: hh}, {id: 'resize-br', x: hw, y: hh},
+                        {id: 'rotate', x: 0, y: -hh - 30} 
+                    ];
+
+                    el.handles.forEach(h => {
+                        if (h.id === 'rotate') {
+                            ctx.font = '18px sans-serif'; 
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillStyle = '#f472b6';
+                            ctx.fillText('🔄', h.x, h.y);
+                        } else {
+                            ctx.beginPath(); ctx.arc(h.x, h.y, 7, 0, Math.PI * 2); 
+                            ctx.fillStyle = '#fff'; 
+                            ctx.fill();
+                            ctx.lineWidth = 2.5; ctx.strokeStyle = '#f472b6'; ctx.stroke();
+                        }
+                    });
+                }
+                ctx.restore();
+            });
+
+            const layerControls = document.getElementById('layerControls');
+            if (layerControls) {
+                if (selectedIndex !== -1) {
+                    layerControls.classList.remove('hidden');
+                    layerControls.classList.add('flex');
+                } else {
+                    layerControls.classList.add('hidden');
+                    layerControls.classList.remove('flex');
+                }
+            }
+        }
+
+        function moveLayer(direction) {
+            if (selectedIndex === -1) return;
+            saveState();
+            const el = elements.splice(selectedIndex, 1)[0];
+            if (direction === 'front') { elements.push(el); selectedIndex = elements.length - 1; } 
+            else if (direction === 'back') { elements.unshift(el); selectedIndex = 0; } 
+            else if (direction === 'forward') { selectedIndex = Math.min(elements.length, selectedIndex + 1); elements.splice(selectedIndex, 0, el); } 
+            else if (direction === 'backward') { selectedIndex = Math.max(0, selectedIndex - 1); elements.splice(selectedIndex, 0, el); }
+        }
+
+        function addText() {
+            saveState(); 
+            elements.push({ 
+                type: 'text', text: textInput.value || "新しい文字", x: canvas.width / 2, y: canvas.height / 2, 
+                color: textColor.value, size: 48, font: textFont.value, align: 'center', effect: textEffect.value, angle: 0, animation: 'none', width: 0, height: 0 
+            });
+            selectedIndex = elements.length - 1;
+            syncFormWithSelected();
+            switchTab('text');
+        }
+
+        function addEmoji(emoji) {
+            saveState(); 
+            elements.push({ type: 'emoji', text: emoji, x: canvas.width / 2, y: canvas.height / 2, size: 100, color: '#000', font: 'sans-serif', angle: 0, animation: 'none' });
+            selectedIndex = elements.length - 1;
+            syncFormWithSelected();
+        }
+
+        function addCustomEmoji() {
+            const emoji = document.getElementById('emojiInput').value;
+            if (emoji) { addEmoji(emoji); document.getElementById('emojiInput').value = ''; }
+        }
+
+        function setBg(type) { saveState(); currentBg = type; }
+
+        function deleteSelected() {
+            if (selectedIndex !== -1) { saveState(); elements.splice(selectedIndex, 1); selectedIndex = -1; syncFormWithSelected(); }
+        }
+
+        function clearCanvas() {
+            if (elements.length > 0 || currentBg !== 'none') saveState(); 
+            elements = []; currentBg = 'none'; selectedIndex = -1; textInput.value = '';
+        }
+
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        }
+
+        function getLocalPos(pos, el) {
+            const angle = el.angle || 0;
+            // アニメーション分のズレは考慮せず、元の基準座標で当たり判定を行う（掴みやすさ重視）
+            const dx = pos.x - el.x;
+            const dy = pos.y - el.y;
+            return {
+                x: dx * Math.cos(-angle) - dy * Math.sin(-angle),
+                y: dx * Math.sin(-angle) + dy * Math.cos(-angle)
+            };
+        }
+
+        function hitTestHandle(pos, el) {
+            if (!el.handles) return null;
+            const localPos = getLocalPos(pos, el);
+            for (let h of el.handles) { 
+                if (Math.hypot(localPos.x - h.x, localPos.y - h.y) <= 15) return h.id; 
+            }
+            return null;
+        }
+
+        function hitTestBody(pos, el) {
+            if (!el.width || !el.height) return false;
+            const localPos = getLocalPos(pos, el);
+            const hw = el.width / 2;
+            const hh = el.height / 2;
+            return localPos.x >= -hw && localPos.x <= hw && localPos.y >= -hh && localPos.y <= hh;
+        }
+
+        function handlePointerDown(e) {
+            e.preventDefault(); const pos = getPointerPos(e);
+            
+            if (selectedIndex !== -1) {
+                const handleId = hitTestHandle(pos, elements[selectedIndex]);
+                if (handleId) {
+                    stateBeforeAction = { elements: getClonedElements(), currentBg };
+                    actionState = handleId; dragStartX = pos.x; dragStartY = pos.y;
+                    if (elements[selectedIndex].type === 'image') initialElementWidth = elements[selectedIndex].width;
+                    else initialElementSize = elements[selectedIndex].size;
+                    return; 
+                }
+            }
+
+            let hitIndex = -1;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                if (hitTestBody(pos, elements[i])) { hitIndex = i; break; }
+            }
+
+            if (hitIndex !== -1) {
+                stateBeforeAction = { elements: getClonedElements(), currentBg };
+                selectedIndex = hitIndex; actionState = 'move';
+                dragStartX = pos.x - elements[hitIndex].x; dragStartY = pos.y - elements[hitIndex].y;
+                syncFormWithSelected();
+            } else {
+                selectedIndex = -1; actionState = 'none'; syncFormWithSelected();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (actionState === 'none' || selectedIndex === -1) {
+                canvas.style.cursor = 'default';
+                if (selectedIndex !== -1) {
+                    const handleId = hitTestHandle(getPointerPos(e), elements[selectedIndex]);
+                    if (handleId === 'rotate') canvas.style.cursor = 'grab';
+                    else if (handleId === 'resize-tl' || handleId === 'resize-br') canvas.style.cursor = 'nwse-resize';
+                    else if (handleId === 'resize-tr' || handleId === 'resize-bl') canvas.style.cursor = 'nesw-resize';
+                    else if (hitTestBody(getPointerPos(e), elements[selectedIndex])) canvas.style.cursor = 'move';
+                }
+                return;
+            }
+            e.preventDefault(); const pos = getPointerPos(e), el = elements[selectedIndex];
+            if (actionState === 'move') {
+                el.x = pos.x - dragStartX; el.y = pos.y - dragStartY;
+            } else if (actionState === 'rotate') {
+                el.angle = Math.atan2(pos.y - el.y, pos.x - el.x) + Math.PI / 2;
+            } else if (actionState.startsWith('resize')) {
+                const scale = Math.hypot(pos.x - el.x, pos.y - el.y) / Math.hypot(dragStartX - el.x, dragStartY - el.y);
+                if (scale > 0) {
+                    if (el.type === 'image') { el.width = Math.max(20, Math.min(800, initialElementWidth * scale)); el.height = el.width / el.aspectRatio; }
+                    else el.size = Math.max(10, Math.min(400, initialElementSize * scale));
+                }
+            }
+        }
+
+        function handlePointerUp(e) {
+            if (actionState !== 'none' && stateBeforeAction) {
+                historyStack.push(stateBeforeAction);
+                if (historyStack.length > 20) historyStack.shift();
+                updateUndoButton();
+            }
+            actionState = 'none'; stateBeforeAction = null; canvas.style.cursor = 'default';
+        }
+
+        function handleKeyDown(e) {
+            if (document.activeElement === textInput) return;
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIndex !== -1) {
+                deleteSelected();
+            }
+        }
+
+        function preparePreview(type) {
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('loadingText').innerText = type === 'gif' ? '魔法のGIFを錬成中...🎬' : 'プレビューを準備中...🖼️';
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            overlay.style.opacity = '1';
+
+            const currentSelected = selectedIndex;
+            selectedIndex = -1; // 選択枠を隠す
+
+            setTimeout(() => {
+                if (type === 'png') {
+                    // ★修正：静止画モード（isStatic = true）で、クッキリとした本来の姿を描画！
+                    draw(0, true);
+                    currentPreviewUrl = canvas.toDataURL('image/png');
+                    currentPreviewFileName = `reaction_${Date.now()}.png`;
+                    
+                    document.getElementById('previewImage').src = currentPreviewUrl;
+                    document.getElementById('btn-modal-save').classList.remove('hidden');
+                    document.getElementById('modal-warning').classList.add('hidden');
+                    
+                    showPreviewModalInternal();
+                    selectedIndex = currentSelected;
+                } else if (type === 'gif') {
+                    const workerBlob = new Blob(
+                        ["importScripts('https://cdn.jsdelivr.net/npm/gif.js/dist/gif.worker.js');"],
+                        { type: "text/javascript" }
+                    );
+                    
+                    const gif = new GIF({
+                        workers: 2,
+                        quality: 10,
+                        workerScript: URL.createObjectURL(workerBlob),
+                        width: 80,
+                        height: 80,
+                        transparent: currentBg === 'none' ? 'rgba(0,0,0,0)' : null
+                    });
+
+                    // GIF用に80x80の裏キャンバスを作成
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = 80;
+                    tempCanvas.height = 80;
+                    const tCtx = tempCanvas.getContext('2d');
+
+                    const frames = 8; // 容量削減のため8フレームに
+                    const delay = 125; // 1秒ループ
+
+                    for (let i = 0; i < frames; i++) {
+                        draw(i / frames);
+                        tCtx.clearRect(0, 0, 80, 80);
+                        tCtx.drawImage(canvas, 0, 0, 80, 80);
+                        gif.addFrame(tCtx, {copy: true, delay: delay});
+                    }
+
+                    gif.on('finished', function(blob) {
+                        currentPreviewUrl = URL.createObjectURL(blob);
+                        currentPreviewFileName = `reaction_${Date.now()}.gif`;
+                        document.getElementById('previewImage').src = currentPreviewUrl;
+                        
+                        const warningEl = document.getElementById('modal-warning');
+                        const saveBtn = document.getElementById('btn-modal-save');
+                        
+                        // 1MB (1,048,576 bytes) 超えチェック
+                        if (blob.size > 1048576) {
+                            warningEl.classList.remove('hidden');
+                            warningEl.innerText = `⚠️ サイズが1MBを超えました！(${Math.round(blob.size/1024)}KB)\n背景をシンプルにするか静止画で保存してね`;
+                            saveBtn.classList.add('hidden');
+                        } else {
+                            warningEl.classList.add('hidden');
+                            saveBtn.classList.remove('hidden');
+                        }
+                        
+                        showPreviewModalInternal();
+                        selectedIndex = currentSelected;
+                    });
+
+                    gif.render();
+                }
+            }, 100);
+        }
+        
+        function showPreviewModalInternal() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                
+                const modal = document.getElementById('previewModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                
+                setTimeout(() => {
+                    document.getElementById('previewModalContent').classList.remove('scale-95');
+                    document.getElementById('previewModalContent').classList.add('scale-100');
+                }, 10);
+            }, 300);
+        }
+
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            document.getElementById('previewModalContent').classList.remove('scale-100');
+            document.getElementById('previewModalContent').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function executeDownload() {
+            const a = document.createElement('a'); 
+            a.href = currentPreviewUrl; 
+            a.download = currentPreviewFileName;
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a);
+            closePreviewModal();
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown); canvas.addEventListener('mousemove', handlePointerMove); window.addEventListener('mouseup', handlePointerUp); 
+        canvas.addEventListener('touchstart', handlePointerDown, {passive: false}); canvas.addEventListener('touchmove', handlePointerMove, {passive: false}); window.addEventListener('touchend', handlePointerUp);
+        window.addEventListener('keydown', handleKeyDown);
+
+        window.onload = () => {
+            init();
+            setTimeout(() => {
+                const overlay = document.getElementById('loadingOverlay');
+                if(overlay) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                        overlay.classList.remove('flex');
+                    }, 300);
+                }
+            }, 800);
+        };
+    </script>
+</body>
+</html>
