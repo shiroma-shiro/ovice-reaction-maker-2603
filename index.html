@@ -6,7 +6,7 @@
     <title>oviceリアクションメーカー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&family=RocknRoll+One&family=Yuji+Syuku&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
-    <!-- ★新設：GIFを生成するための魔法のライブラリ -->
+    <!-- GIFを生成するための魔法のライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
         :root {
@@ -47,6 +47,30 @@
         ::-webkit-scrollbar-track { background: #fdf2f8; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #fbcfe8; border-radius: 10px; border: 2px solid #fdf2f8; }
         ::-webkit-scrollbar-thumb:hover { background: #f472b6; }
+
+        /* スライダーのカスタムスタイル */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #f472b6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #fbcfe8;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-pink-50 text-slate-700 h-screen flex flex-col overflow-hidden">
@@ -109,6 +133,25 @@
                                 <input type="color" id="textColor" value="#fb7185" class="w-full h-[42px] rounded-xl cursor-pointer border-2 border-pink-200 p-0.5 bg-white">
                             </div>
                         </div>
+
+                        <!-- ★新設：文字の「縦のスケール」と「横の間隔」スライダー -->
+                        <div class="col-span-2 bg-white border-2 border-pink-100 p-3 rounded-xl shadow-sm space-y-3">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-xs font-bold text-pink-800">↕️ 縦の長さ（スケール）</label>
+                                    <span id="valScaleY" class="text-xs text-slate-400 font-mono">1.0x</span>
+                                </div>
+                                <input type="range" id="textScaleY" min="0.5" max="2.0" step="0.1" value="1.0">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-xs font-bold text-pink-800">↔️ 文字の間隔（ギュッと詰める）</label>
+                                    <span id="valLetterSpacing" class="text-xs text-slate-400 font-mono">0px</span>
+                                </div>
+                                <input type="range" id="textLetterSpacing" min="-15" max="20" step="1" value="0">
+                            </div>
+                        </div>
+
                         <div class="col-span-2">
                             <label class="block text-sm font-bold text-pink-800 mb-2">揃え位置</label>
                             <div class="flex border-2 border-pink-200 rounded-xl overflow-hidden bg-white text-sm">
@@ -218,7 +261,6 @@
                 <div id="layerControls" class="hidden flex-col items-center mt-4 pt-4 border-t-2 border-dashed border-pink-100 w-full">
                     <span class="text-xs font-bold text-pink-500 mb-3">👇 選択中のアイテムを操作</span>
                     
-                    <!-- ★新設：共通の「動き」設定パネルへお引越し！ -->
                     <div class="w-full mb-3 bg-pink-50/50 p-2 rounded-xl border border-pink-100">
                         <label class="block text-xs font-bold text-pink-800 mb-1 flex items-center gap-1">
                             🎬 アイテムの動き (GIF用)
@@ -273,7 +315,7 @@
         <span style="font-family: 'Yuji Syuku'; font-weight: 400;">あアaA1漢字</span>
     </div>
 
-    <!-- oviceジオラマ風 プレビューモーダル（保存分岐追加） -->
+    <!-- oviceジオラマ風 プレビューモーダル -->
     <div id="previewModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[200] backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full mx-4 flex flex-col items-center transform scale-95 transition-transform duration-200" id="previewModalContent">
             <h3 class="text-xl font-extrabold text-slate-700 mb-6 flex items-center gap-2">
@@ -332,7 +374,13 @@
         const textColor = document.getElementById('textColor');
         const textFont = document.getElementById('textFont');
         const textEffect = document.getElementById('textEffect');
-        const itemAnimation = document.getElementById('itemAnimation'); // ★変数名を変更し、取得先を共通パネルのIDへ
+        const itemAnimation = document.getElementById('itemAnimation'); 
+        
+        // ★新設：スライダー要素の取得
+        const textScaleY = document.getElementById('textScaleY');
+        const textLetterSpacing = document.getElementById('textLetterSpacing');
+        const valScaleY = document.getElementById('valScaleY');
+        const valLetterSpacing = document.getElementById('valLetterSpacing');
 
         function getFontWeight(fontName) {
             if (fontName === 'Zen Maru Gothic' || fontName === 'M PLUS Rounded 1c') return '700';
@@ -340,7 +388,6 @@
             return '400';
         }
 
-        // シード付き疑似乱数（アニメーションの荒々しさを毎フレーム固定するため）
         let _seed = 0;
         function sRandom(seed) {
             if (seed !== undefined) _seed = seed;
@@ -388,8 +435,10 @@
         }
 
         function init() {
+            // ★変更：初期の文字を、インパクト絶大の「縦長・文字詰め」セッティングにしました！
+            // scaleY: 1.3, letterSpacing: -3
             elements.push({
-                type: 'text', text: '激しく\n同意！', x: 128, y: 128, color: '#fb7185', size: 70, font: 'Zen Maru Gothic', align: 'center', effect: 'outline', angle: 0, animation: 'none', width: 0, height: 0
+                type: 'text', text: '激しく\n同意！', x: 128, y: 128, color: '#fb7185', size: 70, font: 'Zen Maru Gothic', align: 'center', effect: 'outline', angle: 0, animation: 'none', width: 0, height: 0, scaleY: 1.3, letterSpacing: -3
             });
             selectedIndex = 0;
             syncFormWithSelected();
@@ -398,22 +447,19 @@
             textColor.addEventListener('input', updateSelectedElement);
             textFont.addEventListener('change', updateSelectedElement);
             textEffect.addEventListener('change', updateSelectedElement);
-            // ★itemAnimationのイベントリスナーはHTML側の onchange="updateSelectedAnimation()" で処理
             
-            // ★新設：常にキャンバスをアニメーションさせる魔法のループ
+            // ★新設：スライダー変更時のイベント
+            textScaleY.addEventListener('input', updateSelectedElement);
+            textLetterSpacing.addEventListener('input', updateSelectedElement);
+            
             requestAnimationFrame(animateLoop);
         }
 
-        // 常に時間を進めて描画し続ける
         function animateLoop(timestamp) {
-            // 1.5秒（1500ms）で1周するループとして 0.0 〜 1.0 の時間を計算
             globalTime = (timestamp % 1500) / 1500; 
             draw(globalTime);
             requestAnimationFrame(animateLoop);
         }
-
-        // 古い forceRedraw はもう呼ばなくて大丈夫ですが互換性のため残します
-        function forceRedraw() {}
 
         function switchTab(tabName) {
             ['text', 'emoji', 'bg'].forEach(name => {
@@ -440,18 +486,36 @@
                 if (el.type === 'text') {
                     textInput.value = el.text; textColor.value = el.color; textFont.value = el.font;
                     textEffect.value = el.effect || 'none';
-                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                    itemAnimation.value = el.animation || 'none'; 
                     updateAlignButtons(el.align || 'center');
+                    
+                    // ★新設：スライダーの値を同期
+                    textScaleY.value = el.scaleY || 1.0;
+                    textLetterSpacing.value = el.letterSpacing || 0;
+                    valScaleY.innerText = Number(textScaleY.value).toFixed(1) + 'x';
+                    valLetterSpacing.innerText = textLetterSpacing.value + 'px';
+                    
+                    textScaleY.disabled = false;
+                    textLetterSpacing.disabled = false;
+                    
                 } else if (el.type === 'emoji') {
                     textInput.value = el.text;
-                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                    itemAnimation.value = el.animation || 'none'; 
+                    
+                    // 絵文字はスライダー無効化
+                    textScaleY.disabled = true;
+                    textLetterSpacing.disabled = true;
                 } else if (el.type === 'image') {
                     textInput.value = '';
-                    itemAnimation.value = el.animation || 'none'; // ★共通アニメーションを同期
+                    itemAnimation.value = el.animation || 'none'; 
+                    textScaleY.disabled = true;
+                    textLetterSpacing.disabled = true;
                 }
             } else {
                 textInput.value = '';
                 updateAlignButtons('center');
+                textScaleY.disabled = true;
+                textLetterSpacing.disabled = true;
             }
         }
 
@@ -487,12 +551,16 @@
                     el.font = textFont.value;
                     if (el.type === 'text') {
                         el.effect = textEffect.value;
+                        // ★新設：スライダーの値を要素に保存
+                        el.scaleY = parseFloat(textScaleY.value);
+                        el.letterSpacing = parseInt(textLetterSpacing.value);
+                        valScaleY.innerText = el.scaleY.toFixed(1) + 'x';
+                        valLetterSpacing.innerText = el.letterSpacing + 'px';
                     }
                 }
             }
         }
 
-        // ★新設：アニメーション設定が変更された時専用の処理
         function updateSelectedAnimation() {
             if (selectedIndex !== -1) {
                 saveState();
@@ -521,7 +589,6 @@
             reader.readAsDataURL(file);
         }
 
-        // 背景を時間 (t) に応じて動かす
         function drawBackground(t) {
             ctx.save();
             const w = canvas.width, h = canvas.height, cx = w / 2, cy = h / 2;
@@ -533,7 +600,6 @@
             } else if (currentBg === 'focus-lines') {
                 ctx.fillStyle = '#fef08a'; ctx.fillRect(0, 0, w, h); 
                 ctx.translate(cx, cy); 
-                // 時間とともにゆっくり回転
                 ctx.rotate(t * (Math.PI * 2) / 36);
                 ctx.fillStyle = '#fde047'; 
                 for (let i = 0; i < 36; i++) { 
@@ -548,7 +614,6 @@
                 ctx.fillStyle = grad; 
                 ctx.fillRect(0, 0, w, h);
                 
-                // フワフワと明滅するネオンオーブ
                 const phase1 = 0.2 + Math.abs(Math.sin(t * Math.PI * 2)) * 0.4;
                 const orb1 = ctx.createRadialGradient(w*0.8, h*0.2, 0, w*0.8, h*0.2, w*0.5);
                 orb1.addColorStop(0, `rgba(236, 72, 153, ${phase1})`); 
@@ -562,7 +627,7 @@
                 ctx.fillStyle = orb2; ctx.fillRect(0, 0, w, h);
                 
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                sRandom(42); // 星の位置を固定
+                sRandom(42); 
                 for(let i=0; i<40; i++) {
                     ctx.beginPath();
                     ctx.arc(sRandom()*w, sRandom()*h, sRandom()*1.5, 0, Math.PI*2);
@@ -578,7 +643,6 @@
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
             } else if (currentBg === 'polka-dots') {
                 ctx.fillStyle = '#fdf2f8'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(244, 114, 182, 0.2)';
-                // 水玉が斜め上にゆっくり流れる
                 const offset = t * 30;
                 for (let y = -30; y <= h + 30; y += 30) { 
                     for (let x = -30; x <= w + 30; x += 30) { 
@@ -590,7 +654,6 @@
             } else if (currentBg === 'speed-lines') {
                 ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(203, 213, 225, 0.5)';
                 sRandom(10);
-                // ビュンビュン流れるスピード線
                 const moveX = (t * w * 2) % w;
                 for (let i = 0; i < 100; i++) { 
                     let lineY = sRandom() * h;
@@ -610,7 +673,6 @@
                 for (let i = 0; i < 100; i++) { 
                     let bx = sRandom() * w;
                     let by = sRandom() * h;
-                    // 星が下に向かって流れる
                     let movedY = (by + t * h) % h; 
                     ctx.beginPath(); ctx.arc(bx, movedY, sRandom() * 1.5, 0, Math.PI * 2); ctx.fill(); 
                 }
@@ -620,22 +682,20 @@
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; 
                 ctx.beginPath(); ctx.moveTo(0, h);
-                sRandom(Math.floor(t * 15)); // コマ送りで炎を揺らめかせる
+                sRandom(Math.floor(t * 15)); 
                 for(let i=0; i<=w; i+=20) { ctx.lineTo(i, h - 30 - sRandom() * 120); } 
                 ctx.lineTo(w, h); ctx.fill();
             } else if (currentBg === 'cyber') {
                 ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'; ctx.lineWidth = 1;
-                // 奥から手前に迫るような緑のグリッド
                 const offset = (t * 20) % 20;
                 for (let i = -20; i < w + 20; i += 20) { ctx.beginPath(); ctx.moveTo(i + offset, 0); ctx.lineTo(i + offset, h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i + offset); ctx.lineTo(w, i + offset); ctx.stroke(); }
             } else if (currentBg === 'checkered') {
                 ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
                 const size = 32; 
-                ctx.translate(cx, cy); ctx.rotate(t * Math.PI / 2); ctx.translate(-cx*2, -cy*2); // ぐるぐる回す
+                ctx.translate(cx, cy); ctx.rotate(t * Math.PI / 2); ctx.translate(-cx*2, -cy*2); 
                 for (let y = -h; y < h*2; y += size) { for (let x = -w; x < w*2; x += size) { if ((x / size + y / size) % 2 === 0) ctx.fillRect(x, y, size, size); } }
             } else if (currentBg === 'spotlight') {
                 ctx.fillStyle = '#fefce8'; ctx.fillRect(0, 0, w, h);
-                // スポットライトが左右に揺れる
                 const spotX = cx + Math.sin(t * Math.PI * 2) * 50;
                 const grad = ctx.createRadialGradient(spotX, cy, 20, spotX, cy, w);
                 grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
@@ -648,12 +708,10 @@
                 const numLines = 120; 
                 const maxRadius = Math.hypot(w/2, h/2); 
                 
-                // コマ送り（1秒間に15回変化）で形をランダムに変え、漫画特有の迫力を出す
                 let frameIdx = Math.floor(t * 15);
                 sRandom(frameIdx); 
 
                 ctx.translate(cx, cy);
-                // 少しずつ回転もさせる
                 ctx.rotate(t * Math.PI * 2 / numLines);
 
                 for (let i = 0; i < numLines; i++) {
@@ -677,10 +735,8 @@
             ctx.restore();
         }
 
-        // ★修正：isStatic 引数を追加し、静止画撮影時はアニメーションを無視させる！
         function draw(t = globalTime, isStatic = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // 静止画の場合でも背景の0秒時点は描画する
             drawBackground(t);
 
             elements.forEach((el, index) => {
@@ -691,7 +747,6 @@
                 let animAngle = 0;
                 let animAlpha = 1;
 
-                // ★静止画モード(isStatic)でない場合のみ、アニメーションの揺らぎを適用！
                 if (!isStatic) {
                     const animType = el.animation || 'none';
                     if (animType === 'buruburu') {
@@ -706,7 +761,6 @@
                     }
                 }
 
-                // 本体の座標に移動
                 ctx.translate(el.x + animOffsetX, el.y + animOffsetY);
                 ctx.rotate((el.angle || 0) + animAngle);
                 ctx.globalAlpha = animAlpha;
@@ -717,10 +771,18 @@
                     const weight = getFontWeight(el.font);
                     ctx.font = `${weight} ${el.size}px '${el.font || 'Zen Maru Gothic'}', sans-serif`;
                     
+                    // ★新設：文字の隙間（レタースペーシング）を適用
+                    const ls = el.letterSpacing || 0;
+                    ctx.letterSpacing = `${ls}px`;
+                    
+                    // ★新設：縦方向のスケールを適用
+                    const scaleY = el.scaleY || 1.0;
+
                     const lines = el.text.split('\n');
                     const lineHeight = el.size * 1.2;
-                    const totalHeight = lines.length * lineHeight;
-                    const startY = -totalHeight / 2 + lineHeight / 2; 
+                    // 高さをスケール分だけ掛けて計算
+                    const totalHeight = lines.length * lineHeight * scaleY;
+                    const startY = -totalHeight / 2 + (lineHeight * scaleY) / 2; 
                     
                     let maxWidth = 0;
                     lines.forEach((line) => {
@@ -728,6 +790,7 @@
                         if(m.width > maxWidth) maxWidth = m.width;
                     });
                     
+                    // 横幅は文字詰めを含んだ結果、高さはスケールを掛けた結果を枠組みに設定
                     el.width = maxWidth + el.size * 0.2; 
                     el.height = totalHeight + el.size * 0.2;
 
@@ -741,44 +804,51 @@
                     const effect = el.effect || 'none';
 
                     lines.forEach((line, i) => {
-                        const drawY = startY + i * lineHeight;
+                        const drawY = startY + i * lineHeight * scaleY;
 
                         if (el.type === 'emoji') {
                             ctx.fillText(line, drawX, drawY);
                             return; 
                         }
+                        
+                        // ★変更：文字をその場で縦長に伸ばす魔法
+                        ctx.save();
+                        // 基準位置までY軸を移動してから、縦方向にだけスケールをかける
+                        ctx.translate(0, drawY);
+                        ctx.scale(1, scaleY);
 
                         if (effect === 'outline') {
                             ctx.lineWidth = Math.max(4, el.size * 0.15);
                             ctx.strokeStyle = 'white'; 
                             ctx.lineJoin = 'round';
-                            ctx.strokeText(line, drawX, drawY);
+                            // 縦長に伸ばした状態で描画（Y座標は移動済みなので 0 を指定）
+                            ctx.strokeText(line, drawX, 0);
                             ctx.fillStyle = el.color;
-                            ctx.fillText(line, drawX, drawY);
+                            ctx.fillText(line, drawX, 0);
                         } else if (effect === 'shadow') {
                             ctx.save();
                             ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
                             ctx.shadowBlur = el.size * 0.1;
                             ctx.shadowOffsetX = el.size * 0.08;
-                            ctx.shadowOffsetY = el.size * 0.08;
+                            ctx.shadowOffsetY = el.size * 0.08 / scaleY; // 影の縦伸びを少し相殺
                             ctx.fillStyle = el.color;
-                            ctx.fillText(line, drawX, drawY);
+                            ctx.fillText(line, drawX, 0);
                             ctx.restore();
                         } else if (effect === 'emboss') {
                             ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-                            ctx.fillText(line, drawX + el.size * 0.04, drawY + el.size * 0.04);
+                            ctx.fillText(line, drawX + el.size * 0.04, (el.size * 0.04) / scaleY);
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                            ctx.fillText(line, drawX - el.size * 0.03, drawY - el.size * 0.03);
+                            ctx.fillText(line, drawX - el.size * 0.03, -(el.size * 0.03) / scaleY);
                             ctx.fillStyle = el.color;
-                            ctx.fillText(line, drawX, drawY);
+                            ctx.fillText(line, drawX, 0);
                         } else {
                             ctx.fillStyle = el.color;
-                            ctx.fillText(line, drawX, drawY);
+                            ctx.fillText(line, drawX, 0);
                         }
+                        ctx.restore();
                     });
                 }
 
-                // 選択枠も一緒にアニメーションさせる
                 if (index === selectedIndex) {
                     const hw = el.width / 2, hh = el.height / 2;
                     
@@ -787,7 +857,6 @@
                     
                     ctx.beginPath(); ctx.moveTo(0, -hh); ctx.lineTo(0, -hh - 30); ctx.lineWidth = 2; ctx.strokeStyle = '#f472b6'; ctx.stroke();
 
-                    // ハンドルはアニメーションを引いたローカル座標系で定義
                     el.handles = [
                         {id: 'resize-tl', x: -hw, y: -hh}, {id: 'resize-tr', x: hw, y: -hh},
                         {id: 'resize-bl', x: -hw, y: hh}, {id: 'resize-br', x: hw, y: hh},
@@ -797,6 +866,8 @@
                     el.handles.forEach(h => {
                         if (h.id === 'rotate') {
                             ctx.font = '18px sans-serif'; 
+                            // 回転アイコン自体はletterSpacingの影響を受けないようにリセット
+                            ctx.letterSpacing = '0px'; 
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillStyle = '#f472b6';
@@ -838,7 +909,8 @@
             saveState(); 
             elements.push({ 
                 type: 'text', text: textInput.value || "新しい文字", x: canvas.width / 2, y: canvas.height / 2, 
-                color: textColor.value, size: 48, font: textFont.value, align: 'center', effect: textEffect.value, angle: 0, animation: 'none', width: 0, height: 0 
+                color: textColor.value, size: 48, font: textFont.value, align: 'center', effect: textEffect.value, angle: 0, animation: 'none', width: 0, height: 0,
+                scaleY: 1.0, letterSpacing: 0 // デフォルト値
             });
             selectedIndex = elements.length - 1;
             syncFormWithSelected();
@@ -877,7 +949,6 @@
 
         function getLocalPos(pos, el) {
             const angle = el.angle || 0;
-            // アニメーション分のズレは考慮せず、元の基準座標で当たり判定を行う（掴みやすさ重視）
             const dx = pos.x - el.x;
             const dy = pos.y - el.y;
             return {
@@ -982,11 +1053,10 @@
             overlay.style.opacity = '1';
 
             const currentSelected = selectedIndex;
-            selectedIndex = -1; // 選択枠を隠す
+            selectedIndex = -1; 
 
             setTimeout(() => {
                 if (type === 'png') {
-                    // ★修正：静止画モード（isStatic = true）で、クッキリとした本来の姿を描画！
                     draw(0, true);
                     currentPreviewUrl = canvas.toDataURL('image/png');
                     currentPreviewFileName = `reaction_${Date.now()}.png`;
@@ -1012,14 +1082,13 @@
                         transparent: currentBg === 'none' ? 'rgba(0,0,0,0)' : null
                     });
 
-                    // GIF用に80x80の裏キャンバスを作成
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = 80;
                     tempCanvas.height = 80;
                     const tCtx = tempCanvas.getContext('2d');
 
-                    const frames = 8; // 容量削減のため8フレームに
-                    const delay = 125; // 1秒ループ
+                    const frames = 8; 
+                    const delay = 125; 
 
                     for (let i = 0; i < frames; i++) {
                         draw(i / frames);
@@ -1036,7 +1105,6 @@
                         const warningEl = document.getElementById('modal-warning');
                         const saveBtn = document.getElementById('btn-modal-save');
                         
-                        // 1MB (1,048,576 bytes) 超えチェック
                         if (blob.size > 1048576) {
                             warningEl.classList.remove('hidden');
                             warningEl.innerText = `⚠️ サイズが1MBを超えました！(${Math.round(blob.size/1024)}KB)\n背景をシンプルにするか静止画で保存してね`;
