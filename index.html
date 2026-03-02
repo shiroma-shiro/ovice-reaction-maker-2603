@@ -6,7 +6,6 @@
     <title>oviceリアクションメーカー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&family=RocknRoll+One&family=Yuji+Syuku&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
-    <!-- GIFを生成するための魔法のライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
         :root {
@@ -48,7 +47,6 @@
         ::-webkit-scrollbar-thumb { background: #fbcfe8; border-radius: 10px; border: 2px solid #fdf2f8; }
         ::-webkit-scrollbar-thumb:hover { background: #f472b6; }
 
-        /* スライダーのカスタムスタイル */
         input[type=range] {
             -webkit-appearance: none;
             width: 100%;
@@ -105,7 +103,6 @@
 
             <div class="p-5 flex-1 overflow-y-auto bg-white/50">
                 
-                <!-- 文字・編集タブ -->
                 <div id="content-text" class="space-y-4 block">
                     <div class="bg-pink-50/50 p-4 rounded-2xl border border-pink-100">
                         <label class="block text-sm font-bold text-pink-800 mb-2 flex items-center gap-1">
@@ -134,7 +131,6 @@
                             </div>
                         </div>
 
-                        <!-- ★新設：文字の「縦のスケール」と「横の間隔」スライダー -->
                         <div class="col-span-2 bg-white border-2 border-pink-100 p-3 rounded-xl shadow-sm space-y-3">
                             <div>
                                 <div class="flex justify-between items-center mb-1">
@@ -149,6 +145,13 @@
                                     <span id="valLetterSpacing" class="text-xs text-slate-400 font-mono">0px</span>
                                 </div>
                                 <input type="range" id="textLetterSpacing" min="-15" max="20" step="1" value="0">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-xs font-bold text-pink-800">↕️ 行間の間隔（上下の隙間）</label>
+                                    <span id="valLineHeight" class="text-xs text-slate-400 font-mono">1.2x</span>
+                                </div>
+                                <input type="range" id="textLineHeight" min="0.5" max="2.0" step="0.1" value="1.2">
                             </div>
                         </div>
 
@@ -179,7 +182,6 @@
                     </div>
                 </div>
 
-                <!-- 絵文字タブ -->
                 <div id="content-emoji" class="space-y-6 hidden">
                     <div class="grid grid-cols-4 gap-3 text-4xl text-center">
                         <button onclick="addEmoji('👍')" class="aspect-square flex items-center justify-center bg-white border-2 border-pink-100 hover:border-pink-400 rounded-2xl transition-all hover:scale-110 shadow-sm">👍</button>
@@ -196,7 +198,6 @@
                     </div>
                 </div>
 
-                <!-- エモ背景タブ -->
                 <div id="content-bg" class="space-y-4 hidden">
                     <div class="mb-4">
                         <input type="file" id="bgUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
@@ -242,14 +243,14 @@
         </aside>
 
         <!-- 右側：キャンバス＆プレビュー領域 -->
-        <section class="flex-1 bg-pink-50/50 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-y-auto">
+        <section class="flex-1 bg-pink-50/50 flex flex-col items-center justify-start py-8 px-4 sm:px-6 relative overflow-y-auto">
             
-            <div class="mb-4 text-center">
+            <div class="mb-4 text-center shrink-0">
                 <h2 class="text-xl font-extrabold text-slate-700 tracking-wide">✨ 完成プレビュー ✨</h2>
                 <p class="text-sm text-pink-500 font-bold mt-1">💡 oviceでは小さく表示されるので、キャンバスいっぱいに大きく配置するのがコツです！</p>
             </div>
 
-            <div class="relative bg-white rounded-3xl shadow-xl shadow-pink-200/50 p-4 mb-8 w-full max-w-sm flex flex-col items-center">
+            <div class="relative bg-white rounded-3xl shadow-xl shadow-pink-200/50 p-4 mb-8 w-full max-w-sm flex flex-col items-center shrink-0">
                 <div class="canvas-container rounded-2xl overflow-hidden border-2 border-pink-100 relative">
                     <canvas id="reactionCanvas" width="256" height="256" class="cursor-move"></canvas>
                 </div>
@@ -289,7 +290,8 @@
                 </div>
             </div>
 
-            <div class="w-full max-w-sm flex flex-col gap-3">
+            <!-- ★お片付け：元の実用的な2ボタンにスッキリ戻しました！ -->
+            <div class="w-full max-w-sm flex flex-col gap-3 shrink-0">
                 <button onclick="clearCanvas()" class="w-full py-3 bg-white border-2 border-red-200 text-red-400 font-bold rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors flex justify-center items-center gap-2">
                     キャンバスを白紙に戻す（全リセット）
                 </button>
@@ -306,7 +308,6 @@
         </section>
     </main>
 
-    <!-- 究極のハック：完全な透明度で背面に常にテキストを配置 -->
     <div style="position: absolute; opacity: 0.01; pointer-events: none; z-index: -1; user-select: none;" aria-hidden="true">
         <span style="font-family: 'Zen Maru Gothic'; font-weight: 700;">あアaA1漢字</span>
         <span style="font-family: 'M PLUS Rounded 1c'; font-weight: 700;">あアaA1漢字</span>
@@ -315,10 +316,10 @@
         <span style="font-family: 'Yuji Syuku'; font-weight: 400;">あアaA1漢字</span>
     </div>
 
-    <!-- oviceジオラマ風 プレビューモーダル -->
     <div id="previewModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[200] backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full mx-4 flex flex-col items-center transform scale-95 transition-transform duration-200" id="previewModalContent">
-            <h3 class="text-xl font-extrabold text-slate-700 mb-6 flex items-center gap-2">
+            <!-- ★お片付け：元の落ち着いた案内に戻しました -->
+            <h3 id="previewModalTitle" class="text-xl font-extrabold text-slate-700 mb-6 flex items-center gap-2 text-center">
                 👀 oviceではこんな感じに見えます！
             </h3>
             
@@ -376,11 +377,13 @@
         const textEffect = document.getElementById('textEffect');
         const itemAnimation = document.getElementById('itemAnimation'); 
         
-        // ★新設：スライダー要素の取得
         const textScaleY = document.getElementById('textScaleY');
         const textLetterSpacing = document.getElementById('textLetterSpacing');
+        const textLineHeight = document.getElementById('textLineHeight');
+        
         const valScaleY = document.getElementById('valScaleY');
         const valLetterSpacing = document.getElementById('valLetterSpacing');
+        const valLineHeight = document.getElementById('valLineHeight');
 
         function getFontWeight(fontName) {
             if (fontName === 'Zen Maru Gothic' || fontName === 'M PLUS Rounded 1c') return '700';
@@ -435,10 +438,8 @@
         }
 
         function init() {
-            // ★変更：初期の文字を、インパクト絶大の「縦長・文字詰め」セッティングにしました！
-            // scaleY: 1.3, letterSpacing: -3
             elements.push({
-                type: 'text', text: '激しく\n同意！', x: 128, y: 128, color: '#fb7185', size: 70, font: 'Zen Maru Gothic', align: 'center', effect: 'outline', angle: 0, animation: 'none', width: 0, height: 0, scaleY: 1.3, letterSpacing: -3
+                type: 'text', text: '激しく\n同意！', x: 128, y: 128, color: '#fb7185', size: 70, font: 'Zen Maru Gothic', align: 'center', effect: 'outline', angle: 0, animation: 'none', width: 0, height: 0, scaleY: 1.3, letterSpacing: -3, lineHeightScale: 1.0
             });
             selectedIndex = 0;
             syncFormWithSelected();
@@ -448,9 +449,9 @@
             textFont.addEventListener('change', updateSelectedElement);
             textEffect.addEventListener('change', updateSelectedElement);
             
-            // ★新設：スライダー変更時のイベント
             textScaleY.addEventListener('input', updateSelectedElement);
             textLetterSpacing.addEventListener('input', updateSelectedElement);
+            textLineHeight.addEventListener('input', updateSelectedElement);
             
             requestAnimationFrame(animateLoop);
         }
@@ -489,33 +490,38 @@
                     itemAnimation.value = el.animation || 'none'; 
                     updateAlignButtons(el.align || 'center');
                     
-                    // ★新設：スライダーの値を同期
                     textScaleY.value = el.scaleY || 1.0;
                     textLetterSpacing.value = el.letterSpacing || 0;
+                    textLineHeight.value = el.lineHeightScale || 1.2;
+                    
                     valScaleY.innerText = Number(textScaleY.value).toFixed(1) + 'x';
                     valLetterSpacing.innerText = textLetterSpacing.value + 'px';
+                    valLineHeight.innerText = Number(textLineHeight.value).toFixed(1) + 'x';
                     
                     textScaleY.disabled = false;
                     textLetterSpacing.disabled = false;
+                    textLineHeight.disabled = false;
                     
                 } else if (el.type === 'emoji') {
                     textInput.value = el.text;
                     itemAnimation.value = el.animation || 'none'; 
                     
-                    // 絵文字はスライダー無効化
                     textScaleY.disabled = true;
                     textLetterSpacing.disabled = true;
+                    textLineHeight.disabled = true;
                 } else if (el.type === 'image') {
                     textInput.value = '';
                     itemAnimation.value = el.animation || 'none'; 
                     textScaleY.disabled = true;
                     textLetterSpacing.disabled = true;
+                    textLineHeight.disabled = true;
                 }
             } else {
                 textInput.value = '';
                 updateAlignButtons('center');
                 textScaleY.disabled = true;
                 textLetterSpacing.disabled = true;
+                textLineHeight.disabled = true;
             }
         }
 
@@ -551,11 +557,13 @@
                     el.font = textFont.value;
                     if (el.type === 'text') {
                         el.effect = textEffect.value;
-                        // ★新設：スライダーの値を要素に保存
                         el.scaleY = parseFloat(textScaleY.value);
                         el.letterSpacing = parseInt(textLetterSpacing.value);
+                        el.lineHeightScale = parseFloat(textLineHeight.value);
+                        
                         valScaleY.innerText = el.scaleY.toFixed(1) + 'x';
                         valLetterSpacing.innerText = el.letterSpacing + 'px';
+                        valLineHeight.innerText = el.lineHeightScale.toFixed(1) + 'x';
                     }
                 }
             }
@@ -771,16 +779,14 @@
                     const weight = getFontWeight(el.font);
                     ctx.font = `${weight} ${el.size}px '${el.font || 'Zen Maru Gothic'}', sans-serif`;
                     
-                    // ★新設：文字の隙間（レタースペーシング）を適用
                     const ls = el.letterSpacing || 0;
                     ctx.letterSpacing = `${ls}px`;
                     
-                    // ★新設：縦方向のスケールを適用
                     const scaleY = el.scaleY || 1.0;
+                    const lhScale = el.lineHeightScale || 1.2;
 
                     const lines = el.text.split('\n');
-                    const lineHeight = el.size * 1.2;
-                    // 高さをスケール分だけ掛けて計算
+                    const lineHeight = el.size * lhScale;
                     const totalHeight = lines.length * lineHeight * scaleY;
                     const startY = -totalHeight / 2 + (lineHeight * scaleY) / 2; 
                     
@@ -790,7 +796,6 @@
                         if(m.width > maxWidth) maxWidth = m.width;
                     });
                     
-                    // 横幅は文字詰めを含んだ結果、高さはスケールを掛けた結果を枠組みに設定
                     el.width = maxWidth + el.size * 0.2; 
                     el.height = totalHeight + el.size * 0.2;
 
@@ -811,9 +816,7 @@
                             return; 
                         }
                         
-                        // ★変更：文字をその場で縦長に伸ばす魔法
                         ctx.save();
-                        // 基準位置までY軸を移動してから、縦方向にだけスケールをかける
                         ctx.translate(0, drawY);
                         ctx.scale(1, scaleY);
 
@@ -821,7 +824,6 @@
                             ctx.lineWidth = Math.max(4, el.size * 0.15);
                             ctx.strokeStyle = 'white'; 
                             ctx.lineJoin = 'round';
-                            // 縦長に伸ばした状態で描画（Y座標は移動済みなので 0 を指定）
                             ctx.strokeText(line, drawX, 0);
                             ctx.fillStyle = el.color;
                             ctx.fillText(line, drawX, 0);
@@ -830,7 +832,7 @@
                             ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
                             ctx.shadowBlur = el.size * 0.1;
                             ctx.shadowOffsetX = el.size * 0.08;
-                            ctx.shadowOffsetY = el.size * 0.08 / scaleY; // 影の縦伸びを少し相殺
+                            ctx.shadowOffsetY = el.size * 0.08 / scaleY; 
                             ctx.fillStyle = el.color;
                             ctx.fillText(line, drawX, 0);
                             ctx.restore();
@@ -866,7 +868,6 @@
                     el.handles.forEach(h => {
                         if (h.id === 'rotate') {
                             ctx.font = '18px sans-serif'; 
-                            // 回転アイコン自体はletterSpacingの影響を受けないようにリセット
                             ctx.letterSpacing = '0px'; 
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
@@ -910,7 +911,7 @@
             elements.push({ 
                 type: 'text', text: textInput.value || "新しい文字", x: canvas.width / 2, y: canvas.height / 2, 
                 color: textColor.value, size: 48, font: textFont.value, align: 'center', effect: textEffect.value, angle: 0, animation: 'none', width: 0, height: 0,
-                scaleY: 1.0, letterSpacing: 0 // デフォルト値
+                scaleY: 1.0, letterSpacing: 0, lineHeightScale: 1.2
             });
             selectedIndex = elements.length - 1;
             syncFormWithSelected();
@@ -1045,6 +1046,7 @@
             }
         }
 
+        // ★お片付け完了：元の安全・確実な80px出力に完全に戻しました！
         function preparePreview(type) {
             const overlay = document.getElementById('loadingOverlay');
             document.getElementById('loadingText').innerText = type === 'gif' ? '魔法のGIFを錬成中...🎬' : 'プレビューを準備中...🖼️';
@@ -1056,14 +1058,38 @@
             selectedIndex = -1; 
 
             setTimeout(() => {
+                const outputSize = 80;
+
+                const modalTitle = document.getElementById('previewModalTitle');
+                const modalDesc = document.getElementById('previewModalDesc');
+                const btnModalSave = document.getElementById('btn-modal-save');
+                const warningEl = document.getElementById('modal-warning');
+
+                if(modalTitle) {
+                    modalTitle.innerHTML = '👀 oviceではこんな感じに見えます！';
+                    modalTitle.className = 'text-xl font-extrabold text-slate-700 mb-6 flex items-center gap-2 text-center';
+                }
+                if(modalDesc) modalDesc.classList.add('hidden');
+                
+                btnModalSave.innerHTML = '📥 このまま保存する';
+                btnModalSave.className = 'w-full py-3.5 bg-gradient-to-r from-pink-400 to-rose-400 text-white font-extrabold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex justify-center items-center gap-2 text-lg';
+
                 if (type === 'png') {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = outputSize;
+                    tempCanvas.height = outputSize;
+                    const tCtx = tempCanvas.getContext('2d');
+                    
                     draw(0, true);
-                    currentPreviewUrl = canvas.toDataURL('image/png');
+                    tCtx.drawImage(canvas, 0, 0, outputSize, outputSize);
+                    
+                    currentPreviewUrl = tempCanvas.toDataURL('image/png');
                     currentPreviewFileName = `reaction_${Date.now()}.png`;
                     
                     document.getElementById('previewImage').src = currentPreviewUrl;
-                    document.getElementById('btn-modal-save').classList.remove('hidden');
-                    document.getElementById('modal-warning').classList.add('hidden');
+                    
+                    warningEl.classList.add('hidden');
+                    btnModalSave.classList.remove('hidden');
                     
                     showPreviewModalInternal();
                     selectedIndex = currentSelected;
@@ -1075,16 +1101,16 @@
                     
                     const gif = new GIF({
                         workers: 2,
-                        quality: 10,
+                        quality: 10, 
                         workerScript: URL.createObjectURL(workerBlob),
-                        width: 80,
-                        height: 80,
+                        width: outputSize,
+                        height: outputSize,
                         transparent: currentBg === 'none' ? 'rgba(0,0,0,0)' : null
                     });
 
                     const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = 80;
-                    tempCanvas.height = 80;
+                    tempCanvas.width = outputSize;
+                    tempCanvas.height = outputSize;
                     const tCtx = tempCanvas.getContext('2d');
 
                     const frames = 8; 
@@ -1092,8 +1118,8 @@
 
                     for (let i = 0; i < frames; i++) {
                         draw(i / frames);
-                        tCtx.clearRect(0, 0, 80, 80);
-                        tCtx.drawImage(canvas, 0, 0, 80, 80);
+                        tCtx.clearRect(0, 0, outputSize, outputSize);
+                        tCtx.drawImage(canvas, 0, 0, outputSize, outputSize);
                         gif.addFrame(tCtx, {copy: true, delay: delay});
                     }
 
@@ -1102,16 +1128,13 @@
                         currentPreviewFileName = `reaction_${Date.now()}.gif`;
                         document.getElementById('previewImage').src = currentPreviewUrl;
                         
-                        const warningEl = document.getElementById('modal-warning');
-                        const saveBtn = document.getElementById('btn-modal-save');
-                        
                         if (blob.size > 1048576) {
                             warningEl.classList.remove('hidden');
                             warningEl.innerText = `⚠️ サイズが1MBを超えました！(${Math.round(blob.size/1024)}KB)\n背景をシンプルにするか静止画で保存してね`;
-                            saveBtn.classList.add('hidden');
+                            btnModalSave.classList.add('hidden');
                         } else {
                             warningEl.classList.add('hidden');
-                            saveBtn.classList.remove('hidden');
+                            btnModalSave.classList.remove('hidden');
                         }
                         
                         showPreviewModalInternal();
